@@ -6,7 +6,9 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node index.js",
-    "dev": "nodemon index.js"
+    "dev": "nodemon index.js",
+    "build:ui":"rm -r build && cd ../client && npm run build && mv dist ../server/build",
+    "deploy:full": "npm run build:ui && git add . && git commit -m pipeline && git push"
   },
   "author": "Saurav Dhakal",
   "license": "MIT",

@@ -6,6 +6,8 @@ const cors = require("cors");
 app.use(express.json());
 app.use(cors());
 
+app.use(express.static("build"));
+
 morgan.token("post-data", function getData(req) {
   return JSON.stringify(req.body);
 });

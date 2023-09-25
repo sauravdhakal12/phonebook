@@ -1,13 +1,21 @@
+// DOTENV loads environment variable from .env file to process.env (User Environment)
+require("dotenv").config()
+
 const express = require("express");
 const app = express();
+
+// For better logs
 const morgan = require("morgan");
 const cors = require("cors");
+const Phonebook = require("./models/phonebook");
 
 app.use(express.json());
 app.use(cors());
 
+// Look-up build folder for matching route
 app.use(express.static("build"));
 
+// Custom Token
 morgan.token("post-data", function getData(req) {
   return JSON.stringify(req.body);
 });
@@ -38,25 +46,24 @@ let persons = [
 ];
 
 app.get("/api/persons", (req, res) => {
-  res.json(persons);
+  Phonebook.find({}).then(result => {
+    res.json(result);
+  });
 });
 
 app.get("/info", (req, res) => {
   const date = new Date();
-  const len = persons.length;
-
-  res.send(`<p>Phonebook has info for ${len} people</p> <p>${date}</p>`);
+  Phonebook.collection.countDocuments().then((count) => {
+    res.send(`<p>Phonebook has info for ${count} people</p> <p>${date}</p>`);
+  });
 });
 
 app.get("/api/persons/:id", (req, res) => {
-  const id = Number(req.params.id);
-  const person = persons.find((p) => p.id === id);
+  const id = req.params.id;
 
-  if (person) {
+  Phonebook.findById(id).then(person => {
     res.json(person);
-  } else {
-    res.status(404).send();
-  }
+  })
 });
 
 app.delete("/api/persons/:id", (req, res) => {
@@ -75,7 +82,6 @@ const alreadyExists = (name) => {
   return ans;
 };
 app.post("/api/persons", (req, res) => {
-  const newId = getId();
   const body = req.body;
 
   if (!body.name) {
@@ -85,14 +91,14 @@ app.post("/api/persons", (req, res) => {
   } else if (alreadyExists(body.name)) {
     res.status(400).json({ error: "Person with the name already exists" });
   } else {
-    const newPerson = {
-      id: newId,
+    const newPerson = new Phonebook({
       name: body.name,
       number: body.number,
-    };
+    });
 
-    persons = persons.concat(newPerson);
-    res.json(newPerson);
+    newPerson.save().then((person) => {
+      res.json(person);
+    })
   }
 });
 

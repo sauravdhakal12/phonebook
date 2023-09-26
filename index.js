@@ -22,6 +22,12 @@ morgan.token("post-data", function getData(req) {
 
 app.use(morgan(":method :url :status :response-time :post-data"));
 
+const errorHandler = (err, req, res, next) => {
+  if (err.name === 'CastError') return res.status(400).send({ error: "malformed key" });
+
+  next(err);
+}
+
 let persons = [
   {
     id: 1,
@@ -66,10 +72,15 @@ app.get("/api/persons/:id", (req, res) => {
   })
 });
 
-app.delete("/api/persons/:id", (req, res) => {
-  const id = Number(req.params.id);
-  persons = persons.filter((person) => person.id !== id);
-  res.status(204).send();
+app.delete("/api/persons/:id", (req, res, next) => {
+  const id = req.params.id;
+
+  Phonebook.findByIdAndRemove(id)
+    .then((data) => {
+      if (data == null) res.status(404).end();
+      res.status(204).end();
+    })
+    .catch(err => { console.log(err); next(err) });
 });
 
 const getId = () => {
@@ -101,6 +112,26 @@ app.post("/api/persons", (req, res) => {
     })
   }
 });
+
+app.put("/api/persons/:id", (req, res) => {
+  const id = req.params.id;
+  const body = req.body;
+
+  const newBook = {
+    name: body.name,
+    number: body.number,
+  };
+
+  Phonebook.findByIdAndUpdate(id, newBook, { new: true }).then((person) => {
+    res.json(person);
+  })
+  .catch((err) => {
+    console.log(err);
+    next(err);
+  })
+})
+
+app.use(errorHandler);
 
 const PORT = 3001;
 app.listen(PORT, () => {

@@ -26,7 +26,7 @@ const errorHandler = (err, req, res, next) => {
   if (err.name === 'CastError') return res.status(400).send({ error: "malformed key" });
   else if (err.name === 'ValidationError') {
     if (err.errors.name !== undefined) {
-      res.status(400).json({ "error": "demo"});
+      res.status(400).json({ "error": "Malformed key"});
     }
     else {
       res.status(400).json({ "error": err.errors.number.message });

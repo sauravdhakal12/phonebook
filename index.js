@@ -24,32 +24,19 @@ app.use(morgan(":method :url :status :response-time :post-data"));
 
 const errorHandler = (err, req, res, next) => {
   if (err.name === 'CastError') return res.status(400).send({ error: "malformed key" });
+  else if (err.name === 'ValidationError') {
+    if (err.errors.name !== undefined) {
+      res.status(400).json({ "error": "demo"});
+    }
+    else {
+      res.status(400).json({ "error": err.errors.number.message });
+    }
+  }
 
   next(err);
 }
 
-let persons = [
-  {
-    id: 1,
-    name: "Arto Hellas",
-    number: "040-123456",
-  },
-  {
-    id: 2,
-    name: "Ada Lovelace",
-    number: "39-44-5323523",
-  },
-  {
-    id: 3,
-    name: "Dan Abramov",
-    number: "12-43-234345",
-  },
-  {
-    id: 4,
-    name: "Mary Poppendieck",
-    number: "39-23-6423122",
-  },
-];
+// let persons = [];
 
 app.get("/api/persons", (req, res) => {
   Phonebook.find({}).then(result => {
@@ -64,12 +51,13 @@ app.get("/info", (req, res) => {
   });
 });
 
-app.get("/api/persons/:id", (req, res) => {
+app.get("/api/persons/:id", (req, res, next) => {
   const id = req.params.id;
 
   Phonebook.findById(id).then(person => {
     res.json(person);
   })
+  .catch(error => next(error));
 });
 
 app.delete("/api/persons/:id", (req, res, next) => {
@@ -80,27 +68,16 @@ app.delete("/api/persons/:id", (req, res, next) => {
       if (data == null) res.status(404).end();
       res.status(204).end();
     })
-    .catch(err => { console.log(err); next(err) });
+    .catch(err => { next(err) });
 });
 
-const getId = () => {
-  const id = persons.length > 0 ? Math.max(...persons.map((p) => p.id)) : 0;
-  return id + 1;
-};
-
-const alreadyExists = (name) => {
-  const ans = persons.find((person) => person.name === name);
-  return ans;
-};
-app.post("/api/persons", (req, res) => {
+app.post("/api/persons", (req, res, next) => {
   const body = req.body;
 
   if (!body.name) {
     res.status(400).json({ error: "Missing name" });
   } else if (!body.number) {
     res.status(400).json({ error: "Missing number" });
-  } else if (alreadyExists(body.name)) {
-    res.status(400).json({ error: "Person with the name already exists" });
   } else {
     const newPerson = new Phonebook({
       name: body.name,
@@ -109,7 +86,9 @@ app.post("/api/persons", (req, res) => {
 
     newPerson.save().then((person) => {
       res.json(person);
-    })
+    }).catch(error => {
+      next(error);
+    });
   }
 });
 
@@ -122,13 +101,12 @@ app.put("/api/persons/:id", (req, res) => {
     number: body.number,
   };
 
-  Phonebook.findByIdAndUpdate(id, newBook, { new: true }).then((person) => {
+  Phonebook.findByIdAndUpdate(id, newBook, { new: true, runValidators: true }).then((person) => {
     res.json(person);
   })
-  .catch((err) => {
-    console.log(err);
-    next(err);
-  })
+    .catch((err) => {
+      next(err);
+    })
 })
 
 app.use(errorHandler);
